@@ -1,58 +1,62 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Teacher, Student
+from django.contrib.auth.hashers import make_password
+from app_users.models import Teacher, User, Student, Parent
+
+
+class UserAllSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = "__all__"
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ("id", "password", "full_name", "phone")
+
+    def create(self, validated_data):
+        validated_data['password'] = make_password(validated_data['password'])
+        return super().create(validated_data)
+
 
 class TeacherSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Teacher
-        fields = ['id', 'user', 'subject', 'experience']
+        fields = ('id', 'user', 'cource', 'description')
 
-    def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create(**user_data)
-        teacher = Teacher.objects.create(user=user, **validated_data)
-        return teacher
 
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', None)
-        if user_data:
-            for attr, value in user_data.items():
-                setattr(instance.user, attr, value)
-            instance.user.save()
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
-
-class StudentSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+class StudentSerializer(serializers.ModelSerializer): #Talabalar uchun serializer
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Student
-        fields = ['id', 'user', 'birth_date', 'grade']
+        fields = ("id", "user", "group", "cource", "description")
 
-    def create(self, validated_data):
-        user_data = validated_data.pop('user')
-        user = User.objects.create(**user_data)
-        student = Student.objects.create(user=user, **validated_data)
-        return student
 
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', None)
-        if user_data:
-            for attr, value in user_data.items():
-                setattr(instance.user, attr, value)
-            instance.user.save()
+class ParentSerializer(serializers.ModelSerializer):
+    students = StudentSerializer(many=True, read_only=True)
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+    class Meta:
+        model = Parent
+        fields = ('id', 'name', 'surname', 'address', 'phone', 'description', 'students')
+
+
+class GetStudentsByIdsSerializer(serializers.Serializer):
+    student_ids = serializers.ListField(child=serializers.IntegerField())
+
+
+class GetTeachersByIdsSerializer(serializers.Serializer):
+    teacher_ids = serializers.ListField(child=serializers.IntegerField())
+
+
+class UserAndTeacherSerializer(serializers.Serializer):
+    user = UserSerializer()
+    teacher = TeacherSerializer()
+
+
+class UserAndStudentSerializer(serializers.Serializer):
+    user = UserSerializer()
+    student = StudentSerializer()
+
