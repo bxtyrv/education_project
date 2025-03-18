@@ -2,7 +2,7 @@ from django.db import models
 from app_users.models import Teacher, Student
 
 class Course(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, default="Default Course Name")
     description = models.TextField()
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='courses')
 
@@ -16,4 +16,3 @@ class Group(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.course.name})"
-
